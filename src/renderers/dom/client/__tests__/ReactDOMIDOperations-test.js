@@ -1,5 +1,5 @@
 /**
- * Copyright 2013-2015, Facebook, Inc.
+ * Copyright 2013-present, Facebook, Inc.
  * All rights reserved.
  *
  * This source code is licensed under the BSD-style license found in the
@@ -20,11 +20,9 @@ describe('ReactDOMIDOperations', function() {
     var html = '\n  \t  <span>  \n  testContent  \t  </span>  \n  \t';
 
     ReactDOMIDOperations.dangerouslyProcessChildrenUpdates(
+      {_nativeNode: stubNode},
       [{
-        parentInst: {_nativeNode: stubNode},
-        parentNode: null,
         type: ReactMultiChildUpdateTypes.SET_MARKUP,
-        markupIndex: null,
         content: html,
         fromIndex: null,
         toIndex: null,

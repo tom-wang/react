@@ -1,5 +1,5 @@
 /**
- * Copyright 2013-2015, Facebook, Inc.
+ * Copyright 2013-present, Facebook, Inc.
  * All rights reserved.
  *
  * This source code is licensed under the BSD-style license found in the
@@ -904,4 +904,124 @@ describe('ReactUpdates', function() {
     expect(renderCount).toBe(1);
   });
 
+  it('marks top-level updates', function() {
+    var ReactFeatureFlags = require('ReactFeatureFlags');
+
+    var Foo = React.createClass({
+      render: function() {
+        return <Bar />;
+      },
+    });
+
+    var Bar = React.createClass({
+      render: function() {
+        return <div />;
+      },
+    });
+
+    var container = document.createElement('div');
+    ReactDOM.render(<Foo />, container);
+
+    try {
+      ReactFeatureFlags.logTopLevelRenders = true;
+      spyOn(console, 'time');
+      spyOn(console, 'timeEnd');
+
+      ReactDOM.render(<Foo />, container);
+
+      expect(console.time.argsForCall.length).toBe(1);
+      expect(console.time.argsForCall[0][0]).toBe('React update: Foo');
+      expect(console.timeEnd.argsForCall.length).toBe(1);
+      expect(console.timeEnd.argsForCall[0][0]).toBe('React update: Foo');
+    } finally {
+      ReactFeatureFlags.logTopLevelRenders = false;
+    }
+  });
+
+  it('throws in setState if the update callback is not a function', function() {
+    function Foo() {
+      this.a = 1;
+      this.b = 2;
+    }
+    var A = React.createClass({
+      getInitialState: function() {
+        return {};
+      },
+      render: function() {
+        return <div />;
+      },
+    });
+    var component = ReactTestUtils.renderIntoDocument(<A />);
+
+    expect(() => component.setState({}, 'no')).toThrow(
+      'setState(...): Expected the last optional `callback` argument ' +
+      'to be a function. Instead received: string.'
+    );
+    expect(() => component.setState({}, {})).toThrow(
+      'setState(...): Expected the last optional `callback` argument ' +
+      'to be a function. Instead received: Object.'
+    );
+    expect(() => component.setState({}, new Foo())).toThrow(
+      'setState(...): Expected the last optional `callback` argument ' +
+      'to be a function. Instead received: Foo (keys: a, b).'
+    );
+  });
+
+  it('throws in replaceState if the update callback is not a function', function() {
+    function Foo() {
+      this.a = 1;
+      this.b = 2;
+    }
+    var A = React.createClass({
+      getInitialState: function() {
+        return {};
+      },
+      render: function() {
+        return <div />;
+      },
+    });
+    var component = ReactTestUtils.renderIntoDocument(<A />);
+
+    expect(() => component.replaceState({}, 'no')).toThrow(
+      'replaceState(...): Expected the last optional `callback` argument ' +
+      'to be a function. Instead received: string.'
+    );
+    expect(() => component.replaceState({}, {})).toThrow(
+      'replaceState(...): Expected the last optional `callback` argument ' +
+      'to be a function. Instead received: Object.'
+    );
+    expect(() => component.replaceState({}, new Foo())).toThrow(
+      'replaceState(...): Expected the last optional `callback` argument ' +
+      'to be a function. Instead received: Foo (keys: a, b).'
+    );
+  });
+
+  it('throws in forceUpdate if the update callback is not a function', function() {
+    function Foo() {
+      this.a = 1;
+      this.b = 2;
+    }
+    var A = React.createClass({
+      getInitialState: function() {
+        return {};
+      },
+      render: function() {
+        return <div />;
+      },
+    });
+    var component = ReactTestUtils.renderIntoDocument(<A />);
+
+    expect(() => component.forceUpdate('no')).toThrow(
+      'forceUpdate(...): Expected the last optional `callback` argument ' +
+      'to be a function. Instead received: string.'
+    );
+    expect(() => component.forceUpdate({})).toThrow(
+      'forceUpdate(...): Expected the last optional `callback` argument ' +
+      'to be a function. Instead received: Object.'
+    );
+    expect(() => component.forceUpdate(new Foo())).toThrow(
+      'forceUpdate(...): Expected the last optional `callback` argument ' +
+      'to be a function. Instead received: Foo (keys: a, b).'
+    );
+  });
 });

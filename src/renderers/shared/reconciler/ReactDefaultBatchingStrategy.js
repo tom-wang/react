@@ -1,5 +1,5 @@
 /**
- * Copyright 2013-2015, Facebook, Inc.
+ * Copyright 2013-present, Facebook, Inc.
  * All rights reserved.
  *
  * This source code is licensed under the BSD-style license found in the
@@ -14,7 +14,6 @@
 var ReactUpdates = require('ReactUpdates');
 var Transaction = require('Transaction');
 
-var assign = require('Object.assign');
 var emptyFunction = require('emptyFunction');
 
 var RESET_BATCHED_UPDATES = {
@@ -35,7 +34,7 @@ function ReactDefaultBatchingStrategyTransaction() {
   this.reinitializeTransaction();
 }
 
-assign(
+Object.assign(
   ReactDefaultBatchingStrategyTransaction.prototype,
   Transaction.Mixin,
   {

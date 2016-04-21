@@ -1,5 +1,5 @@
 /**
- * Copyright 2014-2015, Facebook, Inc.
+ * Copyright 2014-present, Facebook, Inc.
  * All rights reserved.
  *
  * This source code is licensed under the BSD-style license found in the
@@ -11,7 +11,6 @@
 
 'use strict';
 
-var assign = require('Object.assign');
 var invariant = require('invariant');
 
 var autoGenerateWrapperClass = null;
@@ -34,7 +33,7 @@ var ReactNativeComponentInjection = {
   // This accepts a keyed object with classes as values. Each key represents a
   // tag. That particular tag will use this class instead of the generic one.
   injectComponentClasses: function(componentClasses) {
-    assign(tagToComponentClass, componentClasses);
+    Object.assign(tagToComponentClass, componentClasses);
   },
 };
 
@@ -68,7 +67,7 @@ function createInternalComponent(element) {
     'There is no registered component for the tag %s',
     element.type
   );
-  return new genericComponentClass(element.type, element.props);
+  return new genericComponentClass(element);
 }
 
 /**

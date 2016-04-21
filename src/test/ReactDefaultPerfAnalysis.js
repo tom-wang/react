@@ -1,5 +1,5 @@
 /**
- * Copyright 2013-2015, Facebook, Inc.
+ * Copyright 2013-present, Facebook, Inc.
  * All rights reserved.
  *
  * This source code is licensed under the BSD-style license found in the
@@ -11,7 +11,6 @@
 
 'use strict';
 
-var assign = require('Object.assign');
 
 // Don't try to save users less than 1.2ms (a number I made up)
 var DONT_CARE_THRESHOLD = 1.2;
@@ -25,7 +24,9 @@ var DOM_OPERATION_TYPES = {
   'setValueForProperty': 'update attribute',
   'setValueForAttribute': 'update attribute',
   'deleteValueForProperty': 'remove attribute',
-  'dangerouslyReplaceNodeWithMarkupByID': 'replace',
+  'setValueForStyles': 'update styles',
+  'replaceNodeWithMarkup': 'replace',
+  'replaceDelimitedText': 'replace',
 };
 
 function getTotalTime(measurements) {
@@ -63,7 +64,7 @@ function getExclusiveSummary(measurements) {
 
   for (var i = 0; i < measurements.length; i++) {
     var measurement = measurements[i];
-    var allIDs = assign(
+    var allIDs = Object.assign(
       {},
       measurement.exclusive,
       measurement.inclusive
@@ -115,7 +116,7 @@ function getInclusiveSummary(measurements, onlyClean) {
 
   for (var i = 0; i < measurements.length; i++) {
     var measurement = measurements[i];
-    var allIDs = assign(
+    var allIDs = Object.assign(
       {},
       measurement.exclusive,
       measurement.inclusive
@@ -174,16 +175,17 @@ function getUnchangedComponents(measurement) {
   // the amount of time it took to render the entire subtree.
   var cleanComponents = {};
   var writes = measurement.writes;
+  var hierarchy = measurement.hierarchy;
   var dirtyComposites = {};
   Object.keys(writes).forEach(function(id) {
     writes[id].forEach(function(write) {
       // Root mounting (innerHTML set) is recorded with an ID of ''
-      if (id !== '') {
-        measurement.hierarchy[id].forEach((c) => dirtyComposites[c] = true);
+      if (id !== '' && hierarchy.hasOwnProperty(id)) {
+        hierarchy[id].forEach((c) => dirtyComposites[c] = true);
       }
     });
   });
-  var allIDs = assign({}, measurement.exclusive, measurement.inclusive);
+  var allIDs = Object.assign({}, measurement.exclusive, measurement.inclusive);
 
   for (var id in allIDs) {
     var isDirty = false;

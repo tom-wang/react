@@ -1,5 +1,5 @@
 /**
- * Copyright 2013-2015, Facebook, Inc.
+ * Copyright 2013-present, Facebook, Inc.
  * All rights reserved.
  *
  * This source code is licensed under the BSD-style license found in the
@@ -204,9 +204,9 @@ function executeDirectDispatch(event) {
     !Array.isArray(dispatchListener),
     'executeDirectDispatch(...): Invalid `event`.'
   );
-  event.currentTarget = EventPluginUtils.getNodeFromInstance(dispatchInstance);
+  event.currentTarget = dispatchListener ? EventPluginUtils.getNodeFromInstance(dispatchInstance) : null;
   var res = dispatchListener ? dispatchListener(event) : null;
-  event.curentTarget = null;
+  event.currentTarget = null;
   event._dispatchListeners = null;
   event._dispatchInstances = null;
   return res;

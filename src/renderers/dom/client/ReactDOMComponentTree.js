@@ -1,5 +1,5 @@
 /**
- * Copyright 2013-2015, Facebook, Inc.
+ * Copyright 2013-present, Facebook, Inc.
  * All rights reserved.
  *
  * This source code is licensed under the BSD-style license found in the
@@ -64,7 +64,10 @@ function uncacheNode(inst) {
  * node every time.
  *
  * Since we update `_renderedChildren` and the actual DOM at (slightly)
- * different times, we could race here and not get the
+ * different times, we could race here and see a newer `_renderedChildren` than
+ * the DOM nodes we see. To avoid this, ReactMultiChild calls
+ * `prepareToManageChildren` before we change `_renderedChildren`, at which
+ * time the container's child nodes are always cached (until it unmounts).
  */
 function precacheChildNodes(inst, node) {
   if (inst._flags & Flags.hasCachedChildNodes) {
@@ -84,8 +87,12 @@ function precacheChildNodes(inst, node) {
     }
     // We assume the child nodes are in the same order as the child instances.
     for (; childNode !== null; childNode = childNode.nextSibling) {
-      if (childNode.nodeType === 1 &&
-          childNode.getAttribute(ATTR_NAME) === String(childID)) {
+      if ((childNode.nodeType === 1 &&
+           childNode.getAttribute(ATTR_NAME) === String(childID)) ||
+          (childNode.nodeType === 8 &&
+           childNode.nodeValue === ' react-text: ' + childID + ' ') ||
+          (childNode.nodeType === 8 &&
+           childNode.nodeValue === ' react-empty: ' + childID + ' ')) {
         precacheNode(childInst, childNode);
         continue outer;
       }

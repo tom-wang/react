@@ -1,5 +1,5 @@
 /**
- * Copyright 2013-2015, Facebook, Inc.
+ * Copyright 2013-present, Facebook, Inc.
  * All rights reserved.
  *
  * This source code is licensed under the BSD-style license found in the
@@ -16,6 +16,7 @@ var EventPluginHub = require('EventPluginHub');
 var EventPluginRegistry = require('EventPluginRegistry');
 var EventPropagators = require('EventPropagators');
 var React = require('React');
+var ReactDefaultInjection = require('ReactDefaultInjection');
 var ReactDOM = require('ReactDOM');
 var ReactDOMComponentTree = require('ReactDOMComponentTree');
 var ReactElement = require('ReactElement');
@@ -25,7 +26,6 @@ var ReactInstanceMap = require('ReactInstanceMap');
 var ReactUpdates = require('ReactUpdates');
 var SyntheticEvent = require('SyntheticEvent');
 
-var assign = require('Object.assign');
 var emptyObject = require('emptyObject');
 var findDOMNode = require('findDOMNode');
 var invariant = require('invariant');
@@ -362,14 +362,6 @@ var ReactShallowRenderer = function() {
   this._instance = null;
 };
 
-ReactShallowRenderer.prototype.getRenderOutput = function() {
-  return (
-    (this._instance && this._instance._renderedComponent &&
-     this._instance._renderedComponent._renderedOutput)
-    || null
-  );
-};
-
 ReactShallowRenderer.prototype.getMountedInstance = function() {
   return this._instance ? this._instance._instance : null;
 };
@@ -396,12 +388,19 @@ NoopInternalComponent.prototype = {
   unmountComponent: function() {
   },
 
+  getPublicInstance: function() {
+    return null;
+  },
 };
 
-var ShallowComponentWrapper = function() { };
-assign(
+var ShallowComponentWrapper = function(element) {
+  this.construct(element);
+};
+Object.assign(
   ShallowComponentWrapper.prototype,
   ReactCompositeComponent.Mixin, {
+    _constructComponent:
+      ReactCompositeComponent.Mixin._constructComponentWithoutOwner,
     _instantiateReactComponent: function(element) {
       return new NoopInternalComponent(element);
     },
@@ -413,6 +412,11 @@ assign(
 );
 
 ReactShallowRenderer.prototype.render = function(element, context) {
+  // Ensure we've done the default injections. This might not be true in the
+  // case of a simple test that only requires React and the TestUtils in
+  // conjunction with an inline-requires transform.
+  ReactDefaultInjection.inject();
+
   invariant(
     ReactElement.isValidElement(element),
     'ReactShallowRenderer render(): Invalid component element.%s',
@@ -432,14 +436,28 @@ ReactShallowRenderer.prototype.render = function(element, context) {
   if (!context) {
     context = emptyObject;
   }
+  ReactUpdates.batchedUpdates(_batchedRender, this, element, context);
+
+  return this.getRenderOutput();
+};
+
+function _batchedRender(renderer, element, context) {
   var transaction = ReactUpdates.ReactReconcileTransaction.getPooled(true);
-  this._render(element, transaction, context);
+  renderer._render(element, transaction, context);
   ReactUpdates.ReactReconcileTransaction.release(transaction);
+}
+
+ReactShallowRenderer.prototype.getRenderOutput = function() {
+  return (
+    (this._instance && this._instance._renderedComponent &&
+     this._instance._renderedComponent._renderedOutput)
+    || null
+  );
 };
 
 ReactShallowRenderer.prototype.unmount = function() {
   if (this._instance) {
-    this._instance.unmountComponent();
+    this._instance.unmountComponent(false);
   }
 };
 
@@ -447,11 +465,8 @@ ReactShallowRenderer.prototype._render = function(element, transaction, context)
   if (this._instance) {
     this._instance.receiveComponent(element, transaction, context);
   } else {
-    var instance = new ShallowComponentWrapper(element.type);
-    instance.construct(element);
-
+    var instance = new ShallowComponentWrapper(element);
     instance.mountComponent(transaction, null, null, context);
-
     this._instance = instance;
   }
 };
@@ -491,7 +506,10 @@ function makeSimulator(eventType) {
       fakeNativeEvent,
       node
     );
-    assign(event, eventData);
+    // Since we aren't using pooling, always persist the event. This will make
+    // sure it's marked and won't warn when setting additional properties.
+    event.persist();
+    Object.assign(event, eventData);
 
     if (dispatchConfig.phasedRegistrationNames) {
       EventPropagators.accumulateTwoPhaseDispatches(event);
@@ -552,7 +570,7 @@ buildSimulators();
 function makeNativeSimulator(eventType) {
   return function(domComponentOrNode, nativeEventData) {
     var fakeNativeEvent = new Event(eventType);
-    assign(fakeNativeEvent, nativeEventData);
+    Object.assign(fakeNativeEvent, nativeEventData);
     if (ReactTestUtils.isDOMComponent(domComponentOrNode)) {
       ReactTestUtils.simulateNativeEventOnDOMComponent(
         eventType,

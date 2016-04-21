@@ -1,12 +1,11 @@
 /**
- * Copyright 2013-2015, Facebook, Inc.
+ * Copyright 2013-present, Facebook, Inc.
  * All rights reserved.
  *
  * This source code is licensed under the BSD-style license found in the
  * LICENSE file in the root directory of this source tree. An additional grant
  * of patent rights can be found in the PATENTS file in the same directory.
  *
- * @typechecks static-only
  * @providesModule ReactServerRendering
  */
 'use strict';
@@ -29,11 +28,6 @@ var invariant = require('invariant');
  * @return {string} the HTML markup
  */
 function renderToStringImpl(element, makeStaticMarkup) {
-  invariant(
-    ReactElement.isValidElement(element),
-    'renderToString(): You must pass a valid ReactElement.'
-  );
-
   var transaction;
   try {
     ReactUpdates.injection.injectBatchingStrategy(ReactServerBatchingStrategy);
@@ -41,7 +35,7 @@ function renderToStringImpl(element, makeStaticMarkup) {
     transaction = ReactServerRenderingTransaction.getPooled(makeStaticMarkup);
 
     return transaction.perform(function() {
-      var componentInstance = instantiateReactComponent(element, null);
+      var componentInstance = instantiateReactComponent(element);
       var markup = componentInstance.mountComponent(
         transaction,
         null,
@@ -62,10 +56,18 @@ function renderToStringImpl(element, makeStaticMarkup) {
 }
 
 function renderToString(element) {
+  invariant(
+    ReactElement.isValidElement(element),
+    'renderToString(): You must pass a valid ReactElement.'
+  );
   return renderToStringImpl(element, false);
 }
 
 function renderToStaticMarkup(element) {
+  invariant(
+    ReactElement.isValidElement(element),
+    'renderToStaticMarkup(): You must pass a valid ReactElement.'
+  );
   return renderToStringImpl(element, true);
 }
 

@@ -1,5 +1,5 @@
 /**
- * Copyright 2013-2015, Facebook, Inc.
+ * Copyright 2013-present, Facebook, Inc.
  * All rights reserved.
  *
  * This source code is licensed under the BSD-style license found in the
@@ -62,5 +62,24 @@ describe('ReactDOMOption', function() {
 
     expect(console.error.calls.length).toBe(0);
     expect(node.innerHTML).toBe('1  2');
+  });
+
+  it('should be able to use dangerouslySetInnerHTML on option', function() {
+    var stub = <option dangerouslySetInnerHTML={{ __html: 'foobar' }} />;
+    stub = ReactTestUtils.renderIntoDocument(stub);
+
+    var node = ReactDOM.findDOMNode(stub);
+    expect(node.innerHTML).toBe('foobar');
+  });
+
+  it('should set attribute for empty value', function() {
+    var container = document.createElement('div');
+    var option = ReactDOM.render(<option value="" />, container);
+    expect(option.hasAttribute('value')).toBe(true);
+    expect(option.getAttribute('value')).toBe('');
+
+    ReactDOM.render(<option value="lava" />, container);
+    expect(option.hasAttribute('value')).toBe(true);
+    expect(option.getAttribute('value')).toBe('lava');
   });
 });

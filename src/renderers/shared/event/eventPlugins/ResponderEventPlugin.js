@@ -1,5 +1,5 @@
 /**
- * Copyright 2013-2015, Facebook, Inc.
+ * Copyright 2013-present, Facebook, Inc.
  * All rights reserved.
  *
  * This source code is licensed under the BSD-style license found in the
@@ -30,14 +30,14 @@ var executeDispatchesInOrderStopAtTrue =
   EventPluginUtils.executeDispatchesInOrderStopAtTrue;
 
 /**
- * Instance of element that should respond to touch/move types of interactions, as
- * indicated explicitly by relevant callbacks.
+ * Instance of element that should respond to touch/move types of interactions,
+ * as indicated explicitly by relevant callbacks.
  */
 var responderInst = null;
 
 /**
  * Count of current touches. A textInput should become responder iff the
- * the selection changes while there is a touch on the screen.
+ * selection changes while there is a touch on the screen.
  */
 var trackedTouchCount = 0;
 
@@ -46,13 +46,14 @@ var trackedTouchCount = 0;
  */
 var previousActiveTouches = 0;
 
-var changeResponder = function(nextResponderInst) {
+var changeResponder = function(nextResponderInst, blockNativeResponder) {
   var oldResponderInst = responderInst;
   responderInst = nextResponderInst;
   if (ResponderEventPlugin.GlobalResponderHandler !== null) {
     ResponderEventPlugin.GlobalResponderHandler.onChange(
       oldResponderInst,
-      nextResponderInst
+      nextResponderInst,
+      blockNativeResponder
     );
   }
 };
@@ -135,7 +136,7 @@ var eventTypes = {
  *   immediately to indicate so, either by highlighting or moving accordingly.
  * - To be the responder means, that touches are exclusively important to that
  *   responder view, and no other view.
- * - While touches are still occuring, the responder lock can be transfered to
+ * - While touches are still occurring, the responder lock can be transferred to
  *   a new view, but only to increasingly "higher" views (meaning ancestors of
  *   the current responder).
  *
@@ -156,7 +157,7 @@ var eventTypes = {
  *   interaction is no longer locked to it - the system has taken over.
  *
  * - Responder being released:
- *   As soon as no more touches that *started* inside of descendents of the
+ *   As soon as no more touches that *started* inside of descendants of the
  *   *current* responderInst, an `onResponderRelease` event is dispatched to the
  *   current responder, and the responder lock is released.
  *
@@ -330,7 +331,7 @@ function setResponderAndExtractTransfer(
       eventTypes.selectionChangeShouldSetResponder :
     eventTypes.scrollShouldSetResponder;
 
-  // TODO: stop one short of the the current responder.
+  // TODO: stop one short of the current responder.
   var bubbleShouldSetFrom = !responderInst ?
     targetInst :
     EventPluginUtils.getLowestCommonAncestor(responderInst, targetInst);
@@ -370,6 +371,7 @@ function setResponderAndExtractTransfer(
   grantEvent.touchHistory = ResponderTouchHistoryStore.touchHistory;
 
   EventPropagators.accumulateDirectDispatches(grantEvent);
+  var blockNativeResponder = executeDirectDispatch(grantEvent) === true;
   if (responderInst) {
 
     var terminationRequestEvent = ResponderSyntheticEvent.getPooled(
@@ -396,7 +398,7 @@ function setResponderAndExtractTransfer(
       terminateEvent.touchHistory = ResponderTouchHistoryStore.touchHistory;
       EventPropagators.accumulateDirectDispatches(terminateEvent);
       extracted = accumulate(extracted, [grantEvent, terminateEvent]);
-      changeResponder(wantsResponderInst);
+      changeResponder(wantsResponderInst, blockNativeResponder);
     } else {
       var rejectEvent = ResponderSyntheticEvent.getPooled(
         eventTypes.responderReject,
@@ -410,7 +412,7 @@ function setResponderAndExtractTransfer(
     }
   } else {
     extracted = accumulate(extracted, grantEvent);
-    changeResponder(wantsResponderInst);
+    changeResponder(wantsResponderInst, blockNativeResponder);
   }
   return extracted;
 }
@@ -423,9 +425,13 @@ function setResponderAndExtractTransfer(
  * @param {string} topLevelType Record from `EventConstants`.
  * @return {boolean} True if a transfer of responder could possibly occur.
  */
-function canTriggerTransfer(topLevelType, targetInst) {
-  return !!targetInst && (
-    topLevelType === EventConstants.topLevelTypes.topScroll ||
+function canTriggerTransfer(topLevelType, topLevelInst, nativeEvent) {
+  return topLevelInst && (
+    // responderIgnoreScroll: We are trying to migrate away from specifically
+    // tracking native scroll events here and responderIgnoreScroll indicates we
+    // will send topTouchCancel to handle canceling touch events instead
+    (topLevelType === EventConstants.topLevelTypes.topScroll &&
+      !nativeEvent.responderIgnoreScroll) ||
     (trackedTouchCount > 0 &&
       topLevelType === EventConstants.topLevelTypes.topSelectionChange) ||
     isStartish(topLevelType) ||
@@ -492,14 +498,14 @@ var ResponderEventPlugin = {
 
     ResponderTouchHistoryStore.recordTouchTrack(topLevelType, nativeEvent, nativeEventTarget);
 
-    var extracted = canTriggerTransfer(topLevelType, targetInst) ?
+    var extracted = canTriggerTransfer(topLevelType, targetInst, nativeEvent) ?
       setResponderAndExtractTransfer(
         topLevelType,
         targetInst,
         nativeEvent,
         nativeEventTarget) :
       null;
-    // Responder may or may not have transfered on a new touch start/move.
+    // Responder may or may not have transferred on a new touch start/move.
     // Regardless, whoever is the responder after any potential transfer, we
     // direct all touch start/move/ends to them in the form of
     // `onResponderMove/Start/End`. These will be called for *every* additional

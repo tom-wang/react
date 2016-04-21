@@ -1,5 +1,5 @@
 /**
- * Copyright 2013-2015, Facebook, Inc.
+ * Copyright 2013-present, Facebook, Inc.
  * All rights reserved.
  *
  * This source code is licensed under the BSD-style license found in the
@@ -11,7 +11,6 @@
 
 'use strict';
 
-var assign = require('Object.assign');
 var invariant = require('invariant');
 
 var PREFIX = 'key:';
@@ -475,7 +474,7 @@ var OrderedMapMethods = {
   },
 };
 
-assign(OrderedMapImpl.prototype, OrderedMapMethods);
+Object.assign(OrderedMapImpl.prototype, OrderedMapMethods);
 
 var OrderedMap = {
   from: function(orderedMap) {
